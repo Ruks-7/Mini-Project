@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Superstore Analysis Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            color: #222831; /* first-color for text */
+        }
+        .sidebar {
+            min-height: 100vh;
+            background: #222831; /* first-color */
+            color: #eeeeee; /* fourth-color for text */
+        }
+        .main-content {
+            background-color: #eeeeee; /* fourth-color */
+            min-height: 100vh;
+        }
+        .card {
+            border: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background-color: #ffffff;
+        }
+        .card-header {
+            background-color: #2d4059; /* second-color */
+            color: #eeeeee;
+            font-weight: 500;
+        }
+        .metric-card {
+            background: #2d4059; /* second-color */
+            color: white;
+            border-radius: 10px;
+        }
+        .nav-pills .nav-link.active, .btn-primary {
+            background-color: #ff5722; /* third-color */
+            border: none;
+        }
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+        .upload-area {
+            border: 2px dashed #2d4059;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            background-color: #2d4059;
+        }
+        .upload-area:hover {
+            background-color: #3a5374;
+        }
+        .table-responsive {
+            max-height: 400px;
+        }
+        .status-indicator {
+            width: 10px; height: 10px; border-radius: 50%;
+            display: inline-block; margin-right: 8px;
+        }
+        .status-good { background-color: #28a745; }
+        .status-danger { background-color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 sidebar p-4">
+                <h3><i class="fas fa-chart-line me-2"></i>Analysis Dashboard</h3>
+                <hr class="my-4">
+                <div class="mb-4">
+                    <h5><i class="fas fa-upload me-2"></i>Data Input</h5>
+                    <div class="upload-area" id="uploadArea">
+                        <i class="fas fa-cloud-upload-alt fa-3x mb-3"></i>
+                        <p>Drag & drop CSV file here</p>
+                        <input type="file" id="fileInput" accept=".csv" style="display: none;">
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <h5><i class="fas fa-cogs me-2"></i>Analysis</h5>
+                    <button class="btn btn-light w-100" onclick="runAnalysis()">
+                        <i class="fas fa-play me-1"></i>Run Analysis
+                    </button>
+                </div>
+                <div class="mb-4">
+                    <h5><i class="fas fa-info-circle me-2"></i>Status</h5>
+                    <div id="statusDisplay"><small>Ready to analyze data</small></div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9 main-content p-4">
+                <ul class="nav nav-pills mb-4" id="analysisTabs">
+                    <li class="nav-item"><a class="nav-link active" data-bs-toggle="pill" href="#overview">Overview</a></li>
+                    <li class="nav-item"><a class="nav-link" data-bs-toggle="pill" href="#forecasting">Forecasting</a></li>
+                    <li class="nav-item"><a class="nav-link" data-bs-toggle="pill" href="#customers">Customers</a></li>
+                </ul>
+
+                <div class="tab-content">
+                    <!-- Overview Tab -->
+                    <div class="tab-pane fade show active" id="overview">
+                        <div class="row mb-4">
+                            <div class="col-md-3"><div class="card metric-card p-3"><h6>Total Sales</h6><h3 id="totalSales">$0</h3></div></div>
+                            <div class="col-md-3"><div class="card metric-card p-3"><h6>Total Profit</h6><h3 id="totalProfit">$0</h3></div></div>
+                            <div class="col-md-3"><div class="card metric-card p-3"><h6>Total Orders</h6><h3 id="totalOrders">0</h3></div></div>
+                            <div class="col-md-3"><div class="card metric-card p-3"><h6>Customers</h6><h3 id="totalCustomers">0</h3></div></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-8"><div class="card"><div class="card-header">Sales Trend</div><div class="card-body"><canvas id="salesTrendChart"></canvas></div></div></div>
+                            <div class="col-md-4"><div class="card"><div class="card-header">Category Performance</div><div class="card-body"><canvas id="categoryChart"></canvas></div></div></div>
+                        </div>
+                    </div>
+
+                    <!-- Forecasting Tab -->
+                    <div class="tab-pane fade" id="forecasting">
+                        <div class="row mb-4">
+                            <div class="col-md-6"><div class="card"><div class="card-header">ARIMA Forecast</div><div class="card-body"><canvas id="forecastChart"></canvas></div></div></div>
+                            <div class="col-md-6"><div class="card"><div class="card-header">Seasonal Patterns</div><div class="card-body"><canvas id="seasonalChart"></canvas></div></div></div>
+                        </div>
+                    </div>
+
+                    <!-- Customers Tab -->
+                    <div class="tab-pane fade" id="customers">
+                        <div class="row">
+                            <div class="col-md-8"><div class="card"><div class="card-header">Customer Segmentation</div><div class="card-body"><canvas id="customerSegmentChart"></canvas></div></div></div>
+                            <div class="col-md-4"><div class="card"><div class="card-header">Risk Alerts</div><div class="card-body" id="riskAlerts"></div></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let globalData = "";
+        const charts = {};
+
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        uploadArea.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+        uploadArea.addEventListener('dragover', (e) => e.preventDefault());
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            handleFile(e.dataTransfer.files[0]);
+        });
+
+        function handleFile(file) {
+            if (!file || !file.name.endsWith('.csv')) {
+                updateStatus('Please select a CSV file.', true);
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                globalData = e.target.result;
+                updateStatus(`Loaded "${file.name}". Ready to analyze.`);
+            };
+            reader.readAsText(file);
+        }
+
+        function updateStatus(message, isError = false) {
+            document.getElementById('statusDisplay').innerHTML =
+                `<small><span class="status-indicator ${isError ? 'status-danger' : 'status-good'}"></span>${message}</small>`;
+        }
+
+        function runAnalysis() {
+            if (!globalData) {
+                updateStatus('Please load a CSV file first.', true);
+                return;
+            }
+            updateStatus('Running analysis...');
+            fetch('/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/csv' },
+                body: globalData
+            })
+            .then(response => response.json())
+            .then(results => {
+                if (results.error) {
+                    updateStatus(results.error, true);
+                    return;
+                }
+                updateOverview(results.overview);
+                updateForecasting(results.forecasting);
+                updateCustomerAnalysis(results.customers);
+                updateStatus('Analysis complete!');
+            })
+            .catch(error => {
+                console.error('Analysis failed:', error);
+                updateStatus('Analysis failed. See console for details.', true);
+            });
+        }
+
+        function destroyChart(chartName) {
+            if (charts[chartName]) {
+                charts[chartName].destroy();
+            }
+        }
+
+        function updateOverview(data) {
+            document.getElementById('totalSales').textContent = '$' + data.totalSales.toLocaleString(undefined, { maximumFractionDigits: 0 });
+            document.getElementById('totalProfit').textContent = '$' + data.totalProfit.toLocaleString(undefined, { maximumFractionDigits: 0 });
+            document.getElementById('totalOrders').textContent = data.totalOrders.toLocaleString();
+            document.getElementById('totalCustomers').textContent = data.totalCustomers.toLocaleString();
+
+            destroyChart('salesTrend');
+            charts.salesTrend = new Chart(document.getElementById('salesTrendChart'), {
+                type: 'line',
+                data: {
+                    labels: data.salesTrend.labels,
+                    datasets: [{
+                        label: 'Monthly Sales',
+                        data: data.salesTrend.data,
+                        borderColor: '#ff5722',
+                        backgroundColor: 'rgba(255, 87, 34, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                }
+            });
+
+            destroyChart('category');
+            charts.category = new Chart(document.getElementById('categoryChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: data.categoryPerformance.labels,
+                    datasets: [{
+                        data: data.categoryPerformance.data,
+                        backgroundColor: ['#ff5722', '#2d4059', '#222831']
+                    }]
+                }
+            });
+        }
+
+        function updateForecasting(data) {
+            destroyChart('forecast');
+            charts.forecast = new Chart(document.getElementById('forecastChart'), {
+                type: 'line',
+                data: {
+                    labels: data.forecastChart.labels,
+                    datasets: [
+                        { label: 'Historical', data: data.forecastChart.historical, borderColor: '#2d4059', tension: 0.4 },
+                        { label: 'Forecast', data: new Array(data.forecastChart.historical.length).fill(null).concat(data.forecastChart.forecast), borderColor: '#ff5722', borderDash: [5, 5], tension: 0.4 }
+                    ]
+                }
+            });
+
+            destroyChart('seasonal');
+            charts.seasonal = new Chart(document.getElementById('seasonalChart'), {
+                type: 'bar',
+                data: {
+                    labels: data.seasonalChart.labels,
+                    datasets: [{ label: 'Seasonal Effect', data: data.seasonalChart.data, backgroundColor: '#2d4059' }]
+                }
+            });
+        }
+
+        function updateCustomerAnalysis(data) {
+            destroyChart('customerSegment');
+            charts.customerSegment = new Chart(document.getElementById('customerSegmentChart'), {
+                type: 'pie',
+                data: {
+                    labels: data.segmentChart.labels,
+                    datasets: [{
+                        data: data.segmentChart.data,
+                        backgroundColor: ['#ff5722', '#2d4059', '#222831', '#f8f9fa']
+                    }]
+                }
+            });
+
+            document.getElementById('riskAlerts').innerHTML = `
+                <div class="alert alert-danger alert-sm">
+                    <span class="status-indicator status-danger"></span>
+                    ${data.riskAlerts.atRisk} customers at risk
+                </div>
+                <div class="alert alert-success alert-sm">
+                    <span class="status-indicator status-good"></span>
+                    ${data.riskAlerts.champions} champion customers
+                </div>`;
+        }
+    </script>
+</body>
+</html>
